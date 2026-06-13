@@ -499,6 +499,26 @@
     let isAllMode = false;
     let currentMaxGames = 10000; // padrão, será atualizado pelo seletor
 
+    // ==============================================================
+    // 🔧 CONFIGURAÇÃO DO PROXY
+    // ==============================================================
+    const PROXY_URL = "https://proxyinternetarchive-xbox360gamelibrary.pc0800-172.workers.dev";
+    // Função para obter a URL do proxy para metadados
+    function getProxyMetadataUrl(collectionId) {
+        return `${PROXY_URL}/api/metadata/${collectionId}`;
+    }
+    // Os downloads continuam diretos (o proxy pode redirecionar, mas vamos manter direto por enquanto)
+    // Se o proxy tiver rota de download, usamos ela; caso contrário, usamos o original.
+    function getProxyDownloadUrl(collectionId, fileName) {
+        // Se o proxy tiver rota de download, descomente a linha abaixo e use
+        // return `${PROXY_URL}/download/${collectionId}/${encodeURIComponent(fileName)}`;
+        // Caso contrário, use o original (o usuário precisa estar logado)
+        return `https://archive.org/download/${collectionId}/${encodeURIComponent(fileName)}`;
+    }
+
+    // ==============================================================
+    // 🌐 APLICAÇÃO DE IDIOMA
+    // ==============================================================
     function applyLanguage(lang) {
         currentLang = lang;
         const t = translations[lang];
@@ -594,7 +614,7 @@
         statusArea.style.display = "block";
         const t = translations[currentLang];
         if (type === "loading") {
-            statusArea.innerHTML = `<div class="spinner"></div><div>🟢 ${message || t.loading}...</div><div style="font-size:0.7rem; margin-top:6px;">accessing archive.org with credentials</div>`;
+            statusArea.innerHTML = `<div class="spinner"></div><div>🟢 ${message || t.loading}...</div><div style="font-size:0.7rem; margin-top:6px;">accessing archive.org via proxy</div>`;
             gamesGrid.innerHTML = "";
             return;
         }
@@ -646,6 +666,9 @@
 
     function escapeHtml(str) { return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
 
+    // ==============================================================
+    // 📡 REQUISIÇÕES VIA PROXY
+    // ==============================================================
     async function loadCollectionGames() {
         isAllMode = false;
         try {
@@ -653,13 +676,22 @@
             showStatusMessage("loading", translations[currentLang].loading);
             const collection = COLLECTIONS.find(c => c.id === currentCollectionId);
             const extensions = collection ? collection.extensions : [".rar", ".iso", ".zip"];
-            const metadataUrl = `https://archive.org/metadata/${currentCollectionId}`;
-            const downloadBase = `https://archive.org/download/${currentCollectionId}/`;
-            const response = await fetch(metadataUrl, { method: 'GET', credentials: 'include', mode: 'cors' });
+            // Usa o proxy para obter os metadados
+            const metadataUrl = getProxyMetadataUrl(currentCollectionId);
+            const downloadBase = getProxyDownloadUrl(currentCollectionId, ""); // será usado para construir URLs de download
+            
+            const response = await fetch(metadataUrl, {
+                method: 'GET',
+                credentials: 'include',  // envia cookies para o proxy (que serão repassados ao Archive.org)
+                mode: 'cors'
+            });
+            
             if (response.status === 401) throw new Error("Acesso não autorizado (401) – Login necessário");
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
             const data = await response.json();
             if (!data || !data.files) throw new Error("Invalid data structure");
+            
             let gameFiles = data.files.filter(file => file.name && extensions.some(ext => file.name.toLowerCase().endsWith(ext)));
             if (gameFiles.length === 0) {
                 hideStatus();
@@ -668,12 +700,14 @@
                 currentFilteredList = [];
                 return;
             }
+            
             let gamesList = gameFiles.map(file => ({
                 displayName: formatGameName(file.name),
                 sizeFormatted: formatBytes(file.size),
-                downloadUrl: downloadBase + encodeURIComponent(file.name),
+                downloadUrl: getProxyDownloadUrl(currentCollectionId, file.name),
                 extension: file.name.split('.').pop().toUpperCase()
             }));
+            
             gamesList.sort((a, b) => a.displayName.localeCompare(b.displayName));
             const totalGames = gamesList.length;
             const limited = gamesList.length > currentMaxGames;
@@ -702,7 +736,11 @@
         try {
             gamesGrid.innerHTML = "";
             showStatusMessage("loading", translations[currentLang].loadingAll);
-            const promises = COLLECTIONS.map(col => fetch(`https://archive.org/metadata/${col.id}`, { credentials: 'include' }).then(res => res.ok ? res.json() : null).catch(() => null));
+            const promises = COLLECTIONS.map(col => 
+                fetch(getProxyMetadataUrl(col.id), { credentials: 'include' })
+                    .then(res => res.ok ? res.json() : null)
+                    .catch(() => null)
+            );
             const results = await Promise.all(promises);
             let allGames = [];
             for (let i = 0; i < results.length; i++) {
@@ -710,13 +748,12 @@
                 if (!data || !data.files) continue;
                 const col = COLLECTIONS[i];
                 const extensions = col.extensions;
-                const downloadBase = `https://archive.org/download/${col.id}/`;
                 const files = data.files.filter(f => f.name && extensions.some(ext => f.name.toLowerCase().endsWith(ext)));
                 for (const file of files) {
                     allGames.push({
                         displayName: formatGameName(file.name),
                         sizeFormatted: formatBytes(file.size),
-                        downloadUrl: downloadBase + encodeURIComponent(file.name),
+                        downloadUrl: getProxyDownloadUrl(col.id, file.name),
                         extension: file.name.split('.').pop().toUpperCase()
                     });
                 }
@@ -795,7 +832,6 @@
     function setupLimitSelector() {
         limitSelector.addEventListener("change", (e) => {
             currentMaxGames = parseInt(e.target.value, 10);
-            // Recarrega o conteúdo atual (mantém modo e coleção)
             if (isAllMode) loadAllGames();
             else loadCollectionGames();
         });
