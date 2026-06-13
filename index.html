@@ -428,7 +428,6 @@
             allGamesBlade: "📁 SHOW ALL COLLECTIONS",
             loadingAll: "Loading all games from all collections...",
             errorAll: "Failed to load some collections. Showing only available games.",
-            // Opções do seletor de limite
             limit100: "100 games",
             limit200: "200 games",
             limit500: "500 games",
@@ -497,22 +496,23 @@
 
     let currentLang = "en";
     let isAllMode = false;
-    let currentMaxGames = 10000; // padrão, será atualizado pelo seletor
+    let currentMaxGames = 10000;
 
     // ==============================================================
-    // 🔧 CONFIGURAÇÃO DO PROXY
+    // 🔧 CONFIGURAÇÃO DO PROXY (CLOUDFLARE WORKER)
     // ==============================================================
     const PROXY_URL = "https://proxyinternetarchive-xbox360gamelibrary.pc0800-172.workers.dev";
-    // Função para obter a URL do proxy para metadados
+    
     function getProxyMetadataUrl(collectionId) {
         return `${PROXY_URL}/api/metadata/${collectionId}`;
     }
-    // Os downloads continuam diretos (o proxy pode redirecionar, mas vamos manter direto por enquanto)
-    // Se o proxy tiver rota de download, usamos ela; caso contrário, usamos o original.
-    function getProxyDownloadUrl(collectionId, fileName) {
-        // Se o proxy tiver rota de download, descomente a linha abaixo e use
+    
+    // Download continua direto (o navegador envia o cookie para archive.org)
+    // Caso queira forçar o proxy, descomente a linha abaixo e ajuste a rota no Worker.
+    function getDownloadUrl(collectionId, fileName) {
+        // Se o worker tiver rota /download/collectionId/filename, use:
         // return `${PROXY_URL}/download/${collectionId}/${encodeURIComponent(fileName)}`;
-        // Caso contrário, use o original (o usuário precisa estar logado)
+        // Padrão: download direto (requer login no archive.org)
         return `https://archive.org/download/${collectionId}/${encodeURIComponent(fileName)}`;
     }
 
@@ -534,7 +534,6 @@
         document.getElementById("footerLine1").innerText = t.footerLine1;
         document.getElementById("footerLine2").innerText = t.footerLine2;
         
-        // Traduz as opções do seletor de limite
         const limitSelector = document.getElementById("limitSelector");
         if (limitSelector) {
             limitSelector.options[0].text = t.limit100;
@@ -549,7 +548,6 @@
             btn.innerHTML = `⬇️ ${t.downloadBtn} (${ext})`;
         });
         if (currentGamesList.length > 0) filterGames();
-        // Atualiza o texto do botão "SHOW ALL COLLECTIONS" no blade
         const allBlade = document.querySelector(".blade-tab:last-child");
         if (allBlade) allBlade.textContent = t.allGamesBlade;
     }
@@ -667,7 +665,7 @@
     function escapeHtml(str) { return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
 
     // ==============================================================
-    // 📡 REQUISIÇÕES VIA PROXY
+    // 📡 REQUISIÇÕES VIA PROXY (METADADOS)
     // ==============================================================
     async function loadCollectionGames() {
         isAllMode = false;
@@ -676,15 +674,9 @@
             showStatusMessage("loading", translations[currentLang].loading);
             const collection = COLLECTIONS.find(c => c.id === currentCollectionId);
             const extensions = collection ? collection.extensions : [".rar", ".iso", ".zip"];
-            // Usa o proxy para obter os metadados
-            const metadataUrl = getProxyMetadataUrl(currentCollectionId);
-            const downloadBase = getProxyDownloadUrl(currentCollectionId, ""); // será usado para construir URLs de download
             
-            const response = await fetch(metadataUrl, {
-                method: 'GET',
-                credentials: 'include',  // envia cookies para o proxy (que serão repassados ao Archive.org)
-                mode: 'cors'
-            });
+            const metadataUrl = getProxyMetadataUrl(currentCollectionId);
+            const response = await fetch(metadataUrl, { method: 'GET' });
             
             if (response.status === 401) throw new Error("Acesso não autorizado (401) – Login necessário");
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -704,7 +696,7 @@
             let gamesList = gameFiles.map(file => ({
                 displayName: formatGameName(file.name),
                 sizeFormatted: formatBytes(file.size),
-                downloadUrl: getProxyDownloadUrl(currentCollectionId, file.name),
+                downloadUrl: getDownloadUrl(currentCollectionId, file.name),
                 extension: file.name.split('.').pop().toUpperCase()
             }));
             
@@ -737,9 +729,7 @@
             gamesGrid.innerHTML = "";
             showStatusMessage("loading", translations[currentLang].loadingAll);
             const promises = COLLECTIONS.map(col => 
-                fetch(getProxyMetadataUrl(col.id), { credentials: 'include' })
-                    .then(res => res.ok ? res.json() : null)
-                    .catch(() => null)
+                fetch(getProxyMetadataUrl(col.id)).then(res => res.ok ? res.json() : null).catch(() => null)
             );
             const results = await Promise.all(promises);
             let allGames = [];
@@ -753,7 +743,7 @@
                     allGames.push({
                         displayName: formatGameName(file.name),
                         sizeFormatted: formatBytes(file.size),
-                        downloadUrl: getProxyDownloadUrl(col.id, file.name),
+                        downloadUrl: getDownloadUrl(col.id, file.name),
                         extension: file.name.split('.').pop().toUpperCase()
                     });
                 }
@@ -783,7 +773,6 @@
 
     function buildBlades() {
         bladesContainer.innerHTML = "";
-        // Adiciona blades de cada coleção
         COLLECTIONS.forEach(col => {
             const blade = document.createElement("div");
             blade.className = "blade-tab";
@@ -800,7 +789,6 @@
             });
             bladesContainer.appendChild(blade);
         });
-        // Adiciona o blade especial "SHOW ALL COLLECTIONS" por último
         const allBlade = document.createElement("div");
         allBlade.className = "blade-tab";
         if (isAllMode) allBlade.classList.add("active");
@@ -843,7 +831,7 @@
         setupSearch();
         setupLimitSelector();
         setupLanguageSelector();
-        loadCollectionGames(); // inicia com a primeira coleção
+        loadCollectionGames();
         const footerLink = document.querySelector("footer a");
         if (footerLink) footerLink.href = "https://archive.org/";
     }
