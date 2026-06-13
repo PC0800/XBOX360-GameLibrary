@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Xbox 360 · Game Downloader</title>
+    <!-- Favicon: ícone do controle Xbox (SVG inline) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238bc34a'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 13c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z'/%3E%3C/svg%3E">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at 20% 30%, #0a5c2e, #052010);
+            font-family: 'Segoe UI', 'Helvetica Neue', 'Xbox 360', 'Inter', sans-serif;
+            min-height: 100vh;
+            padding: 20px 24px;
+            color: #ffffff;
+        }
+
+        .dashboard {
+            max-width: 1500px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 32px;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 20px 35px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            padding: 20px 24px 30px;
+            border: 1px solid rgba(120, 200, 100, 0.3);
+        }
+
+        .xbox-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            border-bottom: 3px solid #8bc34a;
+            padding-bottom: 12px;
+            margin-bottom: 28px;
+        }
+        .logo-area h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #e0f2e9, #b9f6ca);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.3);
+        }
+        .logo-area p {
+            font-size: 0.8rem;
+            color: #c8e6d9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .header-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .archive-link {
+            background: #1e2a1f;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            border: 1px solid #6f9e4f;
+            transition: 0.2s;
+        }
+        .archive-link a {
+            color: #e0ffc0;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .archive-link a:hover {
+            text-decoration: underline;
+        }
+        /* Seletor de idioma estilo Xbox */
+        .lang-selector {
+            background: #1e2a1f;
+            border: 1px solid #6f9e4f;
+            border-radius: 40px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #e0ffc0;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .lang-selector:hover {
+            background: #2c4028;
+        }
+
+        .blades-container {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+            border-bottom: 1px solid #457a3a;
+            padding-bottom: 12px;
+        }
+        .blade-tab {
+            background: linear-gradient(145deg, #2b482b, #153015);
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border: 1px solid #6d9e4b;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.3);
+            transition: 0.1s linear;
+            color: #e4f5dc;
+        }
+        .blade-tab.active {
+            background: linear-gradient(145deg, #6d9e4b, #2c6430);
+            color: white;
+            text-shadow: 0 1px 1px black;
+            border-color: #c0ff80;
+            box-shadow: 0 0 0 1px #b5ff7a;
+        }
+        .blade-tab:hover {
+            background: #3b653b;
+            transform: scale(1.02);
+        }
+
+        /* Barra de pesquisa + seletor de limite */
+        .search-limit-bar {
+            margin: 20px 0 10px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-bar {
+            flex: 3;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(0,0,0,0.5);
+            border-radius: 60px;
+            padding: 6px 16px;
+            border: 1px solid #6f9e4f;
+        }
+        .search-bar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px 8px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+        .search-bar input::placeholder {
+            color: #b0d48b;
+        }
+        .search-icon {
+            font-size: 1.3rem;
+        }
+        .limit-selector {
+            background: #1e2a1f;
+            border: 1px solid #6f9e4f;
+            border-radius: 40px;
+            padding: 6px 16px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #e0ffc0;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .limit-selector:hover {
+            background: #2c4028;
+        }
+
+        .status-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 24px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            border: 1px solid #5f9e4e;
+        }
+        .spinner {
+            display: inline-block;
+            width: 48px;
+            height: 48px;
+            border: 5px solid #5c9e4e;
+            border-top: 5px solid #dcffb0;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 24px;
+            margin: 28px 0 20px;
+        }
+        .game-tile {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            border-radius: 18px;
+            padding: 18px 14px 20px;
+            border: 1px solid #5a8f42;
+            transition: all 0.2s;
+            box-shadow: 0 8px 14px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+        }
+        .game-tile:hover {
+            transform: scale(1.02);
+            background: rgba(30, 60, 25, 0.85);
+            border-color: #a5d67b;
+            box-shadow: 0 0 12px rgba(150, 255, 100, 0.3);
+        }
+
+        .game-cover {
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            background: linear-gradient(145deg, #0f2a0f, #021002);
+            border-radius: 12px;
+            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border: 1px solid #86c05c;
+            box-shadow: inset 0 0 0 2px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.5);
+            font-family: 'Segoe UI', 'Xbox 360', monospace;
+            padding: 12px;
+        }
+        .cover-icon {
+            font-size: 3.5rem;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px black;
+        }
+        .cover-title {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #f0ffc0;
+            text-shadow: 0 1px 2px black;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 6px 10px;
+            border-radius: 16px;
+            max-width: 95%;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+        .game-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 8px 0 4px;
+            color: #f6ffde;
+            text-shadow: 0 1px 2px black;
+            word-break: break-word;
+        }
+        .game-size {
+            font-size: 0.8rem;
+            background: #1e2a1c;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 40px;
+            width: fit-content;
+            margin: 8px 0 12px;
+            font-family: monospace;
+            border: 0.5px solid #86b868;
+        }
+        .btn-xbox {
+            background: linear-gradient(145deg, #2f6b2f, #1f421f);
+            border: none;
+            padding: 10px 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.1s;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: auto;
+            border: 1px solid #86c05c;
+        }
+        .btn-xbox:hover {
+            background: #3c7e3c;
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px black;
+        }
+
+        .tool-section {
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 28px;
+            padding: 20px;
+            margin-top: 40px;
+            border-top: 2px solid #7cb342;
+            backdrop-filter: blur(4px);
+        }
+        .tool-section h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #e0f5cf, #a9dc7c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .tool-section button {
+            background: #2b4727;
+            border: 1px solid #8bc34a;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #e9ffdb;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 12px;
+        }
+        .tool-section button:hover {
+            background: #3e6738;
+            transform: scale(1.02);
+        }
+        footer {
+            margin-top: 35px;
+            font-size: 0.7rem;
+            text-align: center;
+            color: #c7e6b3;
+            border-top: 1px solid #457a3a;
+            padding-top: 16px;
+        }
+        @media (max-width: 700px) {
+            body { padding: 12px; }
+            .dashboard { padding: 14px; }
+            .game-title { font-size: 1rem; }
+            .cover-icon { font-size: 2.5rem; }
+            .cover-title { font-size: 0.8rem; }
+            .search-limit-bar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="dashboard">
+    <div class="xbox-header">
+        <div class="logo-area">
+            <h1 id="mainTitle">🎮 XBOX 360 · GAME LIBRARY</h1>
+            <p id="subtitle">ISO downloader | powered by Internet Archive</p>
+        </div>
+        <div class="header-right">
+            <div class="archive-link">
+                🔐 <a href="https://archive.org/" target="_blank" id="archiveLinkText">Internet Archive (archive.org)</a> — <span id="loginLabel">Faça login aqui</span>
+            </div>
+            <select id="languageSelector" class="lang-selector">
+                <option value="en">🇬🇧 English</option>
+                <option value="pt">🇵🇹 Português</option>
+                <option value="es">🇪🇸 Español</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="blades-container" id="bladesContainer"></div>
+
+    <div class="search-limit-bar">
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Pesquisar jogos... (ex: Halo, Call of Duty)" autocomplete="off">
+        </div>
+        <select id="limitSelector" class="limit-selector">
+            <option value="100">100 jogos</option>
+            <option value="200">200 jogos</option>
+            <option value="500">500 jogos</option>
+            <option value="1000">1000 jogos</option>
+            <option value="10000" selected>10000 jogos</option>
+        </select>
+    </div>
+
+    <div id="statusArea" class="status-panel" style="display: none;"></div>
+    <div id="gamesGrid" class="games-grid"></div>
+
+    <div class="tool-section">
+        <h2 id="toolTitle">⚙️ ISO → GOD Converter</h2>
+        <div id="toolDesc" style="font-size: 0.85rem; margin-bottom: 8px;">Iso2God transforms your ISO into GOD package for Xbox 360.</div>
+        <button id="iso2godDownloadBtn">📦 Download Iso2God</button>
+    </div>
+    <footer>
+        <span id="footerLine1">🎮 All files are hosted on Internet Archive — active login required.</span><br>
+        <span id="footerLine2">Respect local laws. This site only organizes public links with authentication.</span>
+    </footer>
+</div>
+
+<script>
+    // ==============================================================
+    // 🌐 IDIOMAS SUPORTADOS (INGLÊS PADRÃO)
+    // ==============================================================
+    const translations = {
+        en: {
+            mainTitle: "🎮 XBOX 360 · GAME LIBRARY",
+            subtitle: "ISO downloader | powered by Internet Archive",
+            archiveLink: "Internet Archive (archive.org)",
+            loginLabel: "Login here",
+            searchPlaceholder: "Search games... (ex: Halo, Call of Duty)",
+            toolTitle: "⚙️ ISO → GOD Converter",
+            toolDesc: "Iso2God transforms your ISO into GOD package for Xbox 360.",
+            toolBtn: "📦 Download Iso2God",
+            footerLine1: "🎮 All files are hosted on Internet Archive — active login required.",
+            footerLine2: "Respect local laws. This site only organizes public links with authentication.",
+            loading: "Loading games from collection",
+            errorAuth: "🔐 This collection requires authentication: log in to Internet Archive.",
+            retryBtn: "↻ Verify after login",
+            loginBtn: "🔑 Log in to Archive.org",
+            noGames: "📀 No games match your search or no compatible files.",
+            emptyExt: "No files with extensions",
+            found: "found.",
+            downloadBtn: "DOWNLOAD",
+            sizeLabel: "💾",
+            allGamesBlade: "📁 SHOW ALL COLLECTIONS",
+            loadingAll: "Loading all games from all collections...",
+            errorAll: "Failed to load some collections. Showing only available games.",
+            // Opções do seletor de limite
+            limit100: "100 games",
+            limit200: "200 games",
+            limit500: "500 games",
+            limit1000: "1000 games",
+            limit10000: "10000 games"
+        },
+        pt: {
+            mainTitle: "🎮 XBOX 360 · BIBLIOTECA DE JOGOS",
+            subtitle: "Downloader de ISO | alimentado pelo Internet Archive",
+            archiveLink: "Internet Archive (archive.org)",
+            loginLabel: "Faça login aqui",
+            searchPlaceholder: "Pesquisar jogos... (ex: Halo, Call of Duty)",
+            toolTitle: "⚙️ Conversor ISO → GOD",
+            toolDesc: "Iso2God transforma sua ISO em pacote GOD para Xbox 360.",
+            toolBtn: "📦 Baixar Iso2God",
+            footerLine1: "🎮 Todos os arquivos estão hospedados no Internet Archive — requer login ativo.",
+            footerLine2: "Respeite as leis locais. Este site apenas organiza links públicos com autenticação.",
+            loading: "Carregando jogos da coleção",
+            errorAuth: "🔐 Esta coleção exige autenticação: faça login no Internet Archive.",
+            retryBtn: "↻ Verificar após login",
+            loginBtn: "🔑 Fazer login no Archive.org",
+            noGames: "📀 Nenhum jogo corresponde à pesquisa ou nenhum arquivo compatível.",
+            emptyExt: "Nenhum arquivo com extensões",
+            found: "encontrado.",
+            downloadBtn: "BAIXAR",
+            sizeLabel: "💾",
+            allGamesBlade: "📁 MOSTRAR TODAS COLEÇÕES",
+            loadingAll: "Carregando todos os jogos de todas as coleções...",
+            errorAll: "Falha ao carregar algumas coleções. Exibindo apenas os jogos disponíveis.",
+            limit100: "100 jogos",
+            limit200: "200 jogos",
+            limit500: "500 jogos",
+            limit1000: "1000 jogos",
+            limit10000: "10000 jogos"
+        },
+        es: {
+            mainTitle: "🎮 XBOX 360 · BIBLIOTECA DE JUEGOS",
+            subtitle: "Descargador de ISO | impulsado por Internet Archive",
+            archiveLink: "Internet Archive (archive.org)",
+            loginLabel: "Iniciar sesión aquí",
+            searchPlaceholder: "Buscar juegos... (ej: Halo, Call of Duty)",
+            toolTitle: "⚙️ Convertidor ISO → GOD",
+            toolDesc: "Iso2God transforma tu ISO en paquete GOD para Xbox 360.",
+            toolBtn: "📦 Descargar Iso2God",
+            footerLine1: "🎮 Todos los archivos están alojados en Internet Archive — requiere inicio de sesión activo.",
+            footerLine2: "Respeta las leyes locales. Este sitio solo organiza enlaces públicos con autenticación.",
+            loading: "Cargando juegos de la colección",
+            errorAuth: "🔐 Esta colección requiere autenticación: inicia sesión en Internet Archive.",
+            retryBtn: "↻ Verificar después de iniciar sesión",
+            loginBtn: "🔑 Iniciar sesión en Archive.org",
+            noGames: "📀 Ningún juego coincide con la búsqueda o no hay archivos compatibles.",
+            emptyExt: "No se encontraron archivos con extensiones",
+            found: "encontrados.",
+            downloadBtn: "DESCARGAR",
+            sizeLabel: "💾",
+            allGamesBlade: "📁 MOSTRAR TODAS COLECCIONES",
+            loadingAll: "Cargando todos los juegos de todas las colecciones...",
+            errorAll: "Error al cargar algunas colecciones. Mostrando solo los juegos disponibles.",
+            limit100: "100 juegos",
+            limit200: "200 juegos",
+            limit500: "500 juegos",
+            limit1000: "1000 juegos",
+            limit10000: "10000 juegos"
+        }
+    };
+
+    let currentLang = "en";
+    let isAllMode = false;
+    let currentMaxGames = 10000; // padrão, será atualizado pelo seletor
+
+    function applyLanguage(lang) {
+        currentLang = lang;
+        const t = translations[lang];
+        if (!t) return;
+        document.getElementById("mainTitle").innerText = t.mainTitle;
+        document.getElementById("subtitle").innerText = t.subtitle;
+        document.getElementById("archiveLinkText").innerText = t.archiveLink;
+        document.getElementById("loginLabel").innerText = t.loginLabel;
+        document.getElementById("searchInput").placeholder = t.searchPlaceholder;
+        document.getElementById("toolTitle").innerHTML = t.toolTitle;
+        document.getElementById("toolDesc").innerText = t.toolDesc;
+        document.getElementById("iso2godDownloadBtn").innerHTML = t.toolBtn;
+        document.getElementById("footerLine1").innerText = t.footerLine1;
+        document.getElementById("footerLine2").innerText = t.footerLine2;
+        
+        // Traduz as opções do seletor de limite
+        const limitSelector = document.getElementById("limitSelector");
+        if (limitSelector) {
+            limitSelector.options[0].text = t.limit100;
+            limitSelector.options[1].text = t.limit200;
+            limitSelector.options[2].text = t.limit500;
+            limitSelector.options[3].text = t.limit1000;
+            limitSelector.options[4].text = t.limit10000;
+        }
+        
+        document.querySelectorAll(".btn-xbox").forEach(btn => {
+            const ext = btn.getAttribute("data-ext") || "";
+            btn.innerHTML = `⬇️ ${t.downloadBtn} (${ext})`;
+        });
+        if (currentGamesList.length > 0) filterGames();
+        // Atualiza o texto do botão "SHOW ALL COLLECTIONS" no blade
+        const allBlade = document.querySelector(".blade-tab:last-child");
+        if (allBlade) allBlade.textContent = t.allGamesBlade;
+    }
+
+    function setupLanguageSelector() {
+        const selector = document.getElementById("languageSelector");
+        selector.addEventListener("change", (e) => applyLanguage(e.target.value));
+        selector.value = "en";
+        applyLanguage("en");
+    }
+
+    // ==============================================================
+    // 🎮 CONFIGURAÇÕES GLOBAIS
+    // ==============================================================
+    const DEFAULT_ISO2GOD_URL = "https://dl.download.it/BR/iso2god.zip?st=jjmLEYi5VUY4VwnZcRKcuA&e=1781330769";
+    const COLLECTIONS = [
+        { id: "xbox-360-games", name: "🎮 XBOX 360 - 1", extensions: [".zip", ".rar", ".iso"] },
+        { id: "XBOX_360_1", name: "🎮 XBOX 360 - 2", extensions: [".zip", ".rar", ".iso"] },
+        { id: "XBOX_360_2", name: "🎮 XBOX 360 - 3", extensions: [".zip", ".rar", ".iso"] },
+        { id: "XBOX_360_3", name: "🎮 XBOX 360 - 4", extensions: [".zip", ".rar", ".iso"] },
+        { id: "XBOX_360_4", name: "🎮 XBOX 360 - 5", extensions: [".zip", ".rar", ".iso"] },
+        { id: "XBOX_360_5", name: "🎮 XBOX 360 - 6", extensions: [".zip", ".rar", ".iso"] },
+        { id: "XBOX_360_6", name: "🎮 XBOX 360 - 7", extensions: [".zip", ".rar", ".iso"] },
+        { id: "mx360gcpt3-x360-ztm", name: "🎮 XBOX 360 - 8 (XEX Collection)", extensions: [".zip", ".rar", ".iso"] },
+        { id: "XBOX_360_XBLA", name: "♻️ XBOX 360 - 10 (XBLA Collection)", extensions: [".zip", ".rar", ".iso"] },
+        { id: "msx360gcdlc", name: "⭐ XBOX 360 - 11 (ONLY DLC Collection)", extensions: [".zip", ".rar", ".iso"] }
+    ];
+
+    let currentCollectionId = COLLECTIONS[0].id;
+    let currentCollectionExtensions = COLLECTIONS[0].extensions;
+    let currentGamesList = [];
+    let currentFilteredList = [];
+
+    const bladesContainer = document.getElementById("bladesContainer");
+    const gamesGrid = document.getElementById("gamesGrid");
+    const statusArea = document.getElementById("statusArea");
+    const searchInput = document.getElementById("searchInput");
+    const limitSelector = document.getElementById("limitSelector");
+
+    function formatBytes(bytes) {
+        if (!bytes || bytes === 0 || isNaN(bytes)) return "Unknown size";
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + " GB";
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + " MB";
+        return (bytes / 1024).toFixed(1) + " KB";
+    }
+
+    function formatGameName(rawName) {
+        let name = rawName;
+        name = name.replace(/\.(zip|rar|iso|7z)$/i, '');
+        name = name.replace(/_/g, ' ');
+        name = name.replace(/\s+/g, ' ').trim();
+        name = name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+        return name || rawName;
+    }
+
+    function generateCoverHtml(gameName) {
+        let displayText = gameName.length > 38 ? gameName.slice(0, 35) + "..." : gameName;
+        return `<div class="game-cover"><div class="cover-icon">💿🎮</div><div class="cover-title">${escapeHtml(displayText)}</div></div>`;
+    }
+
+    function showStatusMessage(type, message, showRetry = false, isAuth = false) {
+        statusArea.style.display = "block";
+        const t = translations[currentLang];
+        if (type === "loading") {
+            statusArea.innerHTML = `<div class="spinner"></div><div>🟢 ${message || t.loading}...</div><div style="font-size:0.7rem; margin-top:6px;">accessing archive.org with credentials</div>`;
+            gamesGrid.innerHTML = "";
+            return;
+        }
+        if (type === "error") {
+            let authExtra = '';
+            if (isAuth) {
+                authExtra = `<div style="margin: 12px 0;">
+                    <a href="https://archive.org/account/login.php" target="_blank" style="background:#2c5e2c; padding:6px 18px; border-radius:40px; color:white; text-decoration:none; display:inline-block; margin-right:10px;">${t.loginBtn}</a>
+                    <button id="retryAfterLoginBtn" style="background:#3a5e3a; border:none; padding:6px 18px; border-radius:40px; color:white;">${t.retryBtn}</button>
+                </div><div>✅ After logging in, click "Verify after login".</div>`;
+            }
+            statusArea.innerHTML = `<div style="color:#ffcf9a;">⚠️ <strong>${message}</strong></div>${authExtra}${showRetry && !isAuth ? '<button id="genericRetryBtn" style="margin-top:10px; background:#2f5e2f; border:none; padding:6px 16px; border-radius:40px;">🔄 Try again</button>' : ''}<div style="font-size:0.75rem; margin-top:12px;">Make sure you are logged in at <a href="https://archive.org/" target="_blank" style="color:#b0ff80;">archive.org</a></div>`;
+            if (isAuth) {
+                const retryBtn = document.getElementById("retryAfterLoginBtn");
+                if (retryBtn) retryBtn.addEventListener("click", () => isAllMode ? loadAllGames() : loadCollectionGames());
+            } else if (showRetry) {
+                const genBtn = document.getElementById("genericRetryBtn");
+                if (genBtn) genBtn.addEventListener("click", () => isAllMode ? loadAllGames() : loadCollectionGames());
+            }
+            gamesGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding: 2rem;">⚠️ Failed to load games.</div>`;
+        }
+    }
+
+    function hideStatus() { statusArea.style.display = "none"; }
+
+    function renderGames(gamesArray) {
+        const t = translations[currentLang];
+        if (!gamesArray || gamesArray.length === 0) {
+            gamesGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding: 2rem; background:#0c1f0c60; border-radius:32px;">${t.noGames}</div>`;
+            return;
+        }
+        gamesGrid.innerHTML = "";
+        for (let game of gamesArray) {
+            const tile = document.createElement("div");
+            tile.className = "game-tile";
+            tile.innerHTML = `${generateCoverHtml(game.displayName)}<div class="game-title">${escapeHtml(game.displayName)}</div><div class="game-size">${t.sizeLabel} ${game.sizeFormatted}</div><button class="btn-xbox" data-url="${game.downloadUrl}" data-ext="${game.extension}">⬇️ ${t.downloadBtn} (${game.extension})</button>`;
+            const btn = tile.querySelector("button");
+            btn.addEventListener("click", () => window.open(game.downloadUrl, '_blank'));
+            gamesGrid.appendChild(tile);
+        }
+    }
+
+    function filterGames() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        if (searchTerm === "") currentFilteredList = [...currentGamesList];
+        else currentFilteredList = currentGamesList.filter(game => game.displayName.toLowerCase().includes(searchTerm));
+        renderGames(currentFilteredList);
+    }
+
+    function escapeHtml(str) { return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
+
+    async function loadCollectionGames() {
+        isAllMode = false;
+        try {
+            gamesGrid.innerHTML = "";
+            showStatusMessage("loading", translations[currentLang].loading);
+            const collection = COLLECTIONS.find(c => c.id === currentCollectionId);
+            const extensions = collection ? collection.extensions : [".rar", ".iso", ".zip"];
+            const metadataUrl = `https://archive.org/metadata/${currentCollectionId}`;
+            const downloadBase = `https://archive.org/download/${currentCollectionId}/`;
+            const response = await fetch(metadataUrl, { method: 'GET', credentials: 'include', mode: 'cors' });
+            if (response.status === 401) throw new Error("Acesso não autorizado (401) – Login necessário");
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (!data || !data.files) throw new Error("Invalid data structure");
+            let gameFiles = data.files.filter(file => file.name && extensions.some(ext => file.name.toLowerCase().endsWith(ext)));
+            if (gameFiles.length === 0) {
+                hideStatus();
+                gamesGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding: 2rem;">📭 ${translations[currentLang].emptyExt} ${extensions.join(', ')} ${translations[currentLang].found}</div>`;
+                currentGamesList = [];
+                currentFilteredList = [];
+                return;
+            }
+            let gamesList = gameFiles.map(file => ({
+                displayName: formatGameName(file.name),
+                sizeFormatted: formatBytes(file.size),
+                downloadUrl: downloadBase + encodeURIComponent(file.name),
+                extension: file.name.split('.').pop().toUpperCase()
+            }));
+            gamesList.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            const totalGames = gamesList.length;
+            const limited = gamesList.length > currentMaxGames;
+            if (limited) gamesList = gamesList.slice(0, currentMaxGames);
+            currentGamesList = gamesList;
+            filterGames();
+            hideStatus();
+            if (limited) {
+                const note = document.createElement("div");
+                note.style.gridColumn = "1/-1";
+                note.style.textAlign = "center";
+                note.style.fontSize = "0.75rem";
+                note.style.marginTop = "8px";
+                note.innerText = `📌 Showing ${currentMaxGames} of ${totalGames} games. Use search to filter.`;
+                gamesGrid.appendChild(note);
+            }
+        } catch (err) {
+            console.error(err);
+            const isAuthError = err.message && (err.message.includes("401") || err.message.includes("autorizado"));
+            showStatusMessage("error", isAuthError ? translations[currentLang].errorAuth : `Error: ${err.message}`, !isAuthError, isAuthError);
+        }
+    }
+
+    async function loadAllGames() {
+        isAllMode = true;
+        try {
+            gamesGrid.innerHTML = "";
+            showStatusMessage("loading", translations[currentLang].loadingAll);
+            const promises = COLLECTIONS.map(col => fetch(`https://archive.org/metadata/${col.id}`, { credentials: 'include' }).then(res => res.ok ? res.json() : null).catch(() => null));
+            const results = await Promise.all(promises);
+            let allGames = [];
+            for (let i = 0; i < results.length; i++) {
+                const data = results[i];
+                if (!data || !data.files) continue;
+                const col = COLLECTIONS[i];
+                const extensions = col.extensions;
+                const downloadBase = `https://archive.org/download/${col.id}/`;
+                const files = data.files.filter(f => f.name && extensions.some(ext => f.name.toLowerCase().endsWith(ext)));
+                for (const file of files) {
+                    allGames.push({
+                        displayName: formatGameName(file.name),
+                        sizeFormatted: formatBytes(file.size),
+                        downloadUrl: downloadBase + encodeURIComponent(file.name),
+                        extension: file.name.split('.').pop().toUpperCase()
+                    });
+                }
+            }
+            if (allGames.length === 0) throw new Error("No games found in any collection");
+            allGames.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            const totalGames = allGames.length;
+            const limited = allGames.length > currentMaxGames;
+            if (limited) allGames = allGames.slice(0, currentMaxGames);
+            currentGamesList = allGames;
+            filterGames();
+            hideStatus();
+            if (limited) {
+                const note = document.createElement("div");
+                note.style.gridColumn = "1/-1";
+                note.style.textAlign = "center";
+                note.style.fontSize = "0.75rem";
+                note.style.marginTop = "8px";
+                note.innerText = `📌 Showing ${currentMaxGames} of ${totalGames} games (all collections). Use search to filter.`;
+                gamesGrid.appendChild(note);
+            }
+        } catch (err) {
+            console.error(err);
+            showStatusMessage("error", translations[currentLang].errorAll, true, false);
+        }
+    }
+
+    function buildBlades() {
+        bladesContainer.innerHTML = "";
+        // Adiciona blades de cada coleção
+        COLLECTIONS.forEach(col => {
+            const blade = document.createElement("div");
+            blade.className = "blade-tab";
+            if (!isAllMode && col.id === currentCollectionId) blade.classList.add("active");
+            blade.textContent = col.name;
+            blade.addEventListener("click", () => {
+                if (!isAllMode && col.id === currentCollectionId) return;
+                isAllMode = false;
+                currentCollectionId = col.id;
+                currentCollectionExtensions = col.extensions;
+                document.querySelectorAll(".blade-tab").forEach(btn => btn.classList.remove("active"));
+                blade.classList.add("active");
+                loadCollectionGames();
+            });
+            bladesContainer.appendChild(blade);
+        });
+        // Adiciona o blade especial "SHOW ALL COLLECTIONS" por último
+        const allBlade = document.createElement("div");
+        allBlade.className = "blade-tab";
+        if (isAllMode) allBlade.classList.add("active");
+        allBlade.textContent = translations[currentLang].allGamesBlade;
+        allBlade.addEventListener("click", () => {
+            if (isAllMode) return;
+            isAllMode = true;
+            document.querySelectorAll(".blade-tab").forEach(btn => btn.classList.remove("active"));
+            allBlade.classList.add("active");
+            loadAllGames();
+        });
+        bladesContainer.appendChild(allBlade);
+    }
+
+    function setupIso2God() {
+        const isoBtn = document.getElementById("iso2godDownloadBtn");
+        if (isoBtn) {
+            isoBtn.addEventListener("click", () => {
+                if (DEFAULT_ISO2GOD_URL && DEFAULT_ISO2GOD_URL !== "https://www.example.com/iso2god.zip") window.open(DEFAULT_ISO2GOD_URL, '_blank');
+                else alert("⚠️ Iso2God URL not configured! Edit DEFAULT_ISO2GOD_URL constant.");
+            });
+        }
+    }
+
+    function setupSearch() {
+        searchInput.addEventListener("input", () => filterGames());
+    }
+
+    function setupLimitSelector() {
+        limitSelector.addEventListener("change", (e) => {
+            currentMaxGames = parseInt(e.target.value, 10);
+            // Recarrega o conteúdo atual (mantém modo e coleção)
+            if (isAllMode) loadAllGames();
+            else loadCollectionGames();
+        });
+    }
+
+    function init() {
+        buildBlades();
+        setupIso2God();
+        setupSearch();
+        setupLimitSelector();
+        setupLanguageSelector();
+        loadCollectionGames(); // inicia com a primeira coleção
+        const footerLink = document.querySelector("footer a");
+        if (footerLink) footerLink.href = "https://archive.org/";
+    }
+
+    init();
+</script>
+</body>
+</html>
